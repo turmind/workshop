@@ -1,4 +1,4 @@
-# emr poc
+# emr workshop
 
 ## vpc 和 s3 endpoint
 
@@ -79,9 +79,162 @@ a1.sinks.k1.channel = c1
 - 下载相应源码[datax](https://github.com/alibaba/DataX)及[datax s3 plugin](https://github.com/crazyoyo/datax-s3-plugin)
 - datax最新源码不支持编译s3 plugin,需要切换到分支*dependabot/maven/ch.qos.logback-logback-classic-1.2.0*,切换分支方法可参考[swithc branch](https://devconnected.com/how-to-switch-branch-on-git/)
 
+### 相关步骤
+
+下载DataX, 下载S3插件
+
+```linux
+git clone https://github.com/alibaba/DataX
+git clone https://github.com/crazyoyo/DataXS3Plugin
+```
+
+复制数据到DataX
+
+```linux
+cp -r DataXS3Plugin/s3* DataX/
+```
+
+切换到相应分支
+
+```linux
+git branch
+* dependabot/maven/ch.qos.logback-logback-classic-1.2.0
+```
+
+修改pom.xml，增加s3reader及s3writer，如下显示的73、103行
+
+```linux
+ 73         <module>s3reader</module>
+ 74
+ 75         <!-- writer -->
+ 76         <module>mysqlwriter</module>
+ 77         <module>drdswriter</module>
+ 78         <module>odpswriter</module>
+ 79         <module>txtfilewriter</module>
+ 80         <module>ftpwriter</module>
+ 81         <module>hdfswriter</module>
+ 82         <module>streamwriter</module>
+ 83         <module>otswriter</module>
+ 84         <module>oraclewriter</module>
+ 85         <module>sqlserverwriter</module>
+ 86         <module>postgresqlwriter</module>
+ 87         <module>kingbaseeswriter</module>
+ 88         <module>osswriter</module>
+ 89         <module>mongodbwriter</module>
+ 90         <module>adswriter</module>
+ 91         <module>ocswriter</module>
+ 92         <module>rdbmswriter</module>
+ 93         <module>hbase11xwriter</module>
+ 94         <module>hbase094xwriter</module>
+ 95         <module>hbase11xsqlwriter</module>
+ 96         <module>hbase11xsqlreader</module>
+ 97         <module>elasticsearchwriter</module>
+ 98         <module>tsdbwriter</module>
+ 99         <module>adbpgwriter</module>
+100         <module>gdbwriter</module>
+101         <module>cassandrawriter</module>
+102         <module>clickhousewriter</module>
+103         <module>s3writer</module>
+```
+
+修改package.xml，分别增加s3write及s3reader
+
+```linux
+<fileSet>
+        <directory>s3writer/target/datax/</directory>
+        <includes>
+        <include>**/*.*</include>
+        </includes>
+        <outputDirectory>datax</outputDirectory>
+</fileSet>
+
+<fileSet>
+        <directory>s3reader/target/datax/</directory>
+        <includes>
+        <include>**/*.*</include>
+        </includes>
+        <outputDirectory>datax</outputDirectory>
+</fileSet>
+```
+
+编译环境及编译命令如下
+
+```linux
+mvn --version
+
+Apache Maven 3.0.5 (Red Hat 3.0.5-17)
+Maven home: /usr/share/maven
+Java version: 1.8.0_342, vendor: Red Hat, Inc.
+Java home: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.342.b07-1.amzn2.0.1.x86_64/jre
+Default locale: en_US, platform encoding: UTF-8
+OS name: "linux", version: "5.10.135-122.509.amzn2.x86_64", arch: "amd64", family: "unix"
+
+mvn clean install -Dmaven.test.skip=true
+```
+
+### job示例
+
+从mysql导出数据到s3
+
+```linux
+{
+    "job": {
+        "setting": {},
+        "content": [
+            {
+                "reader": {
+                    "name": "mysqlreader",
+                    "parameter": {
+                        "column": [
+                            "a",
+                            "b",
+                            "c"
+                        ],
+                        "connection": [
+                            {
+                                "jdbcUrl": [
+                                    "jdbc:mysql://rds-mysql.xxxxx.us-east-1.rds.amazonaws.com:3306/test?characterEncoding=utf8"
+                                ],
+                                "table": [
+                                    "t"
+                                ]
+                            }
+                        ],
+                        "password": "xxxxxxx",
+                        "username": "xxxx"
+                    }
+                },
+                "writer": {
+                    "name": "s3writer",
+                    "parameter": {
+                        "endpoint": "s3.us-east-1.amazonaws.com",
+                        "region": "us-east-1",
+                        "accessId": "",
+                        "accessKey": "",
+                        "bucket": "emr-demo-xxx",
+                        "object": "datax",
+                        "encoding": "UTF-8",
+                        "fieldDelimiter": ",",
+                        "writeMode": "append"
+                    }
+                }
+            }
+        ]
+    }
+}
+```
+
 ## s3distcp
 
 - 使用s3distcp进行存储数据的迁移，可参考[official](https://docs.aws.amazon.com/zh_cn/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html)，可参考demo:[s3distcp](https://aws.amazon.com/cn/blogs/china/seven-tips-for-using-s3distcp-on-amazon-emr-to-move-data-efficiently-between-hdfs-and-amazon-s3/)
+
+- 使用s3distcp进行存储数据的迁移，可参考[official](https://docs.aws.amazon.com/zh_cn/emr/latest/ReleaseGuide/UsingEMR_s3distcp.html)，可参考demo:[s3distcp](https://aws.amazon.com/cn/blogs/china/seven-tips-for-using-s3distcp-on-amazon-emr-to-move-data-efficiently-between-hdfs-and-amazon-s3/)
+
+对于从hdfs中转到S3中的hive表数据，对分区的支持需要进行修复，执行如下命令，test2对应需要修复的表名
+
+```linux
+msck repair table test2;
+```
 
 ## workshop地址
 
